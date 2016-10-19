@@ -5,8 +5,6 @@ require 'data_load'
 require 'network_config'
 require 'gnuplot'
 
-local data=env["data_load"]()
-
 function env:init(args)
         
         setDL_network(args)
@@ -32,8 +30,9 @@ function env:get_TestData(sin_index, dt)
         
 end
 
-function env:Testing_init(args)
-
+function env:Testing_init(opt)
+      local args=opt.env_params
+      self.opt=opt
       --info about data used
       self.points=args.points or 10             --the num of dataset 
       self.dt=args.dt or 0.05                        --
@@ -145,18 +144,144 @@ function env:draw()
    local path='test'
    path=path..#self.action_index..'_noise_'..self.noise
     gnuplot.pngfigure('src/result/'..path..'.png')
-    gnuplot.plot({torch.Tensor(self.sindex), torch.Tensor(self.price)},{torch.Tensor(self.action_index), torch.Tensor(self.shb)} , {torch.Tensor(self.action_index),torch.Tensor(self.own)})
+--    gnuplot.plot({torch.Tensor(self.sindex), torch.Tensor(self.price)},{torch.Tensor(self.action_index), torch.Tensor(self.shb)} , {torch.Tensor(self.action_index),torch.Tensor(self.own)})
+    gnuplot.plot({torch.Tensor(self.sindex), torch.Tensor(self.price)}, {torch.Tensor(self.action_index),torch.Tensor(self.own)})
     gnuplot.plotflush()
 end
 
 function env:get_FXAction()
-
+        return {-1,0,1}
 end
 
-function env:get_FXData()
-
+function env:FX_init(opt)
+      local args=opt.env_params
+      self.opt=opt
+      --info about data used
+      self.points=args.points or 10             --the num of dataset 
+      self.fx_index=0     --
+      self.hold_num=args. hold_num or 0  --dollar
+      --info about my account and lossrate
+      self.Account_All=args.Account_All or 100
+      self.lossRate=args.lossRate or 0.6      --if lose 40% stop
+      self.Account=self.Account_All             --RMB
+      self.max=args.max or 100
+      self.price={}
+      self.sindex={}
+      self.shb={}
+      self.trw=0
+      self.own={} 
+      self.action_index={}
+      local data=load:data_loading(opt)
+      self.data=data:select(2,3)
+      
+      for i=1,self.points do 
+          self.price[i]=self.data[i]
+          self.sindex[i]=i
+        end
+      
+      return self
 end
 
-function env:get_FXState()
+function env:FX_Step(action)
+      self.fx_index = self.fx_index + 1
+      local fx_index=self.fx_index
+      local points=self.points
+      
+      self.shb[fx_index]=action+1+1-----plot
+      self.sindex[fx_index+points]=fx_index
+      self.action_index[fx_index]=fx_index
+    
+      --next time price
+      self.price[fx_index+points]=self.data[fx_index+points]
+   
+      local terminal =  false
+      local dprice  = self.price[fx_index+points]-self.price[fx_index+points-1]
+        
+        if action==-1 then 
+           if self.hold_num<=0 then
+               self.hold_num=self.hold_num+action
+           end
+           if self.hold_num>0 then
+               action=action*math.abs(self.hold_num)
+               self.hold_num=0             
+             end
+        end
+        if action==1 then 
+            if self.hold_num<0 then
+                action=action*math.abs(self.hold_num)
+                self.hold_num=0
+           end
+            if self.hold_num>=0 then
+                self.hold_num=self.hold_num+action
+             end
+        end
+   
+          -------------------print___info------------------------
+--        print (sin_index+points , self.price[sin_index+points] )
+--        print (sin_index+points-1 , self.price[sin_index+points-1]  ) 
+--        print ("reward=",self.hold_num,"X",dprice," = ",self.hold_num*dprice)
+   
+        --hold_num  = hold_num  + action 
+          local rw=self.hold_num  * dprice---action
+          self.trw=self.trw+rw
+          self.own[fx_index]=self.trw/self.max
+          
+--            print("before action",self.Account)
+            --hold_num  = hold_num  + action --buy/hold/sell 1$ at point 12
+            self.Account  = self.Account  - action  * self.price[fx_index+points]
+--            print("after -",action,"X",self.price[sin_index+points],-action  * self.price[sin_index+points]," = ",self.Account)
 
+   
+          local Tensor = torch.Tensor(points+2,1):fill(0.01)
+          Tensor[{{1,points},1}]=self.data:sub(fx_index+1,fx_index+points)
+          
+            Tensor[points+1]  = self.hold_num
+            local tmp=self.Account  + self.hold_num  * self.price[fx_index+points]
+            Tensor[points+2]  = tmp
+            
+--            print(tmp)
+--            print(self.Account_All * (1-self.lossRate))
+            if tmp <  self.Account_All * (1-self.lossRate) then
+                terminal = true
+            end
+          return Tensor, rw, terminal
+end
+
+function env:New_FXState()
+      self.hold_num=0
+      self.Account=self.Account_All
+      local state,reward,terminal = self:FX_Step(0)
+      
+      return  state,reward,terminal
+end
+
+function env:AnotherFXState()
+      local state,reward,terminal = self:FX_Step(0)
+      
+      return  state,reward,terminal
+end
+
+function env:Step(action)
+      if self.opt.env=='sin_data' then
+             return self:TestStep(action)
+      else
+             return self:FX_Step(action)
+      end
+end
+
+function env:getState()
+      if self.opt.env=='sin_data' then
+             return self:NewTestState()
+      else
+             return self:New_FXState()
+      end
+end
+
+
+function env:newState()
+      if self.opt.env=='sin_data' then
+             return self:AnotherTestState()
+      else
+             return self:AnotherFXState()
+      end
 end

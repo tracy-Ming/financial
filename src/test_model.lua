@@ -15,6 +15,7 @@ cmd:text('Options:')
 cmd:option('-loop', 100, 'the size of the testset')
 cmd:option('-env', 'sin_data', 'name of environment to use')
 cmd:option('-env_params', 'points=10,dt=0.05,sin_index=0,noise=1,hold_num=0,Account_All=100,lossRate=0.6,max=100', 'string of environment parameters')
+cmd:option('-filepath', 'test.txt', 'FX_data used to')
 cmd:option('-name', '', 'filename used for saving network and training history')
 cmd:option('-network', 'dqn_financial.t7', 'reload pretrained network')
 cmd:option('-agent', 'NeuralQLearner', 'name of agent file to use')
@@ -42,7 +43,8 @@ local print = function(...)
 end
 
 -- start a new game
-local state, reward, terminal = data_env:NewTestState()
+local state, reward, terminal = data_env:getState()
+
 --print("Started ...")
 N_reward=0
 p_reward=0
@@ -61,7 +63,8 @@ T_reward=0
     --print("Loop----------------------",i)
     local action_index = agent:perceive(reward, state, terminal, true, 0.05)
     --print("next action 1/2/3 for S/H/B",action_index)
-    state, reward, terminal = data_env:TestStep(shb_actions[action_index])
+    
+    state, reward, terminal = env:Step(shb_actions[action_index])
    
    T_reward=reward+T_reward
    

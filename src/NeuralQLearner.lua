@@ -351,8 +351,8 @@ function nql:eGreedy(state, testing_ep)
     -- Epsilon greedy
     if torch.uniform() < self.ep then
       local tmp=torch.random(1, self.n_actions)
-       print("随机action是1-----卖，2------持有，3-------买",tmp)
-       print()
+--       print("随机action是1-----卖，2------持有，3-------买",tmp)
+--       print()
         return tmp
         --return torch.random(1, self.n_actions)
     else
@@ -406,8 +406,8 @@ nnq=nnq+1
     local r = torch.random(1, #besta)
 
     self.lastAction = besta[r]
-    print("besta is 1/2/3 for S/H/B",besta[r])
-    print()
+--    print("besta is 1/2/3 for S/H/B",besta[r])
+--    print()
     return besta[r]
 end
 

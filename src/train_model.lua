@@ -13,11 +13,12 @@ cmd:text()
 cmd:text('Train Agent in Environment:')
 cmd:text()
 cmd:text('Options:')
-cmd:option('-env', 'sin_data', 'name of environment to use')
+cmd:option('-env', 'sin_dat', 'name of environment to use')
 cmd:option('-env_params', 'points=10,dt=0.05,sin_index=0,noise=1,hold_num=0,Account_All=100,lossRate=0.6,max=100', 'string of environment parameters')
+cmd:option('-filepath', 'train.txt', 'FX_data used to')
 --cmd:option('-env_params', 'ep_endt=1000000,discount=0.99,learn_start=50000', 'string of environment parameters')
 --cmd:option('-pool_frms', '','string of frame pooling parameters (e.g.: size=2,type="max")')
---cmd:option('-actrep', 1, 'how many times to repeat action')
+cmd:option('-actrep', 1, 'how many times to repeat action')
 cmd:option('-name', 'dqn_financial', 'name of the model')
 cmd:option('-network', 'trainning_dqn', 'load pretrained network')
 cmd:option('-agent', 'NeuralQLearner', 'name of agent file to use')
@@ -59,7 +60,7 @@ local v_history = {}
 local qmax_history = {}
 local td_history = {}
 local reward_history = {}
-local step = 1
+local step = 0
 time_history[1] = 0
 
 local total_reward
@@ -68,7 +69,7 @@ local nepisodes
 local episode_reward
 
 -- start a new game
-local state, reward, terminal = data_env:NewTestState()
+local state, reward, terminal = data_env:getState()
  print( "first state: ")
  print(state )
 
@@ -79,17 +80,17 @@ while step < opt.steps do
     local action_index = agent:perceive(reward, state, terminal)
 
     print ("opt.itera: ",step)
-    print("action: ",shb_actions[action_index])
+--    print("action: ",shb_actions[action_index])
 
     if not terminal then
-        state, reward, terminal = env:TestStep(shb_actions[action_index], true)
+        state, reward, terminal = env:Step(shb_actions[action_index], true)
         
-        print ("reward: ",reward)
-        print( "next state: ")
-        print(state) 
+--        print ("reward: ",reward)
+--        print( "next state: ")
+--        print(state) 
    
     else
-          state, reward, terminal = env:AnotherTestState()
+          state, reward, terminal = env:newState()
     end
 
     -- display screen
@@ -107,8 +108,7 @@ while step < opt.steps do
 
     if step % opt.eval_freq == 0 and step > learn_start then
 
-        state, reward, terminal = env:AnotherTestState()
-
+        state, reward, terminal = env:newState()
         total_reward = 0
         nrewards = 0
         nepisodes = 0
@@ -119,7 +119,7 @@ while step < opt.steps do
             local action_index = agent:perceive(reward, state, terminal, true, 0.05)
 
             -- in test mode (episodes don't end when losing a life)
-            state, reward, terminal = env:TestStep(shb_actions[action_index])
+        state, reward, terminal = env:Step(shb_actions[action_index])
 
             -- display screen
             -- win = image.display({image=screen, win=win})
@@ -136,7 +136,7 @@ while step < opt.steps do
                 total_reward = total_reward + episode_reward
                 episode_reward = 0
                 nepisodes = nepisodes + 1
-                state, reward, terminal = env:AnotherTestState()
+                state, reward, terminal = env:newState()
             end
         end
 

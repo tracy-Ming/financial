@@ -97,9 +97,12 @@ function setup(_opt)
     --- first things first
     local opt = torchSetup(_opt)
     
-    local data_env=env:Testing_init(opt.env_params) 
+    local data_env=env:Testing_init(opt) 
     local action=data_env:get_TestAction()
-
+    if opt.env ~='sin_data' then
+        data_env=env:FX_init(opt) 
+        action=data_env:get_FXAction()
+    end
     -- agent options
     _opt.agent_params.actions   = action
     _opt.agent_params.gpu       = _opt.gpu
