@@ -53,7 +53,7 @@ function nql:__init(args)
 
     self.gpu            = args.gpu
 
-    self.input_dims     = args.input_dims or {1, 12, 1}
+    self.input_dims     = args.input_dims or  {1, self.state_dim, 1}
     --self.preproc        = args.preproc  -- name of preprocessing network
     self.histType       = args.histType or "linear"  -- history type to use
     self.histSpacing    = args.histSpacing or 1

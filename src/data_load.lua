@@ -31,21 +31,21 @@ function load:data_loading(args)
     local file = io.open(filePath, 'r')
     local header = file:read()
     
-    local data = torch.Tensor(ROWS, COLS-1)
+    local data = torch.Tensor(ROWS, COLS-2)
     
     local i = 0
     for line in file:lines('*l') do
       i = i + 1
       local l = line:split(',')
       for key, val in ipairs(l) do
-         if key>1 then 
-            data[i][key-1] = val          
+         if key>2 then 
+            data[i][key-2] = val          
          end
       end
     end
     --print(data)
     file:close()
-    return data
+    return data,ROWS
 end
 
 --

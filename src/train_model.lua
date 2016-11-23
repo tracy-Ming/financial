@@ -13,9 +13,9 @@ cmd:text()
 cmd:text('Train Agent in Environment:')
 cmd:text()
 cmd:text('Options:')
-cmd:option('-env', 'sin_dat', 'name of environment to use')
-cmd:option('-env_params', 'points=10,dt=0.05,sin_index=0,noise=1,hold_num=0,Account_All=100,lossRate=0.6,max=100', 'string of environment parameters')
-cmd:option('-filepath', 'train.txt', 'FX_data used to')
+cmd:option('-env', 'sin_data', 'name of environment to use')
+cmd:option('-env_params', 'points=20,dt=0.05,sin_index=0,noise=0,hold_num=0,Account_All=3000,lossRate=0.6,max=500', 'string of environment parameters')
+cmd:option('-filepath', 'EURUSD60_train.csv', 'FX_data used to')
 --cmd:option('-env_params', 'ep_endt=1000000,discount=0.99,learn_start=50000', 'string of environment parameters')
 --cmd:option('-pool_frms', '','string of frame pooling parameters (e.g.: size=2,type="max")')
 cmd:option('-actrep', 1, 'how many times to repeat action')
@@ -23,15 +23,15 @@ cmd:option('-name', 'dqn_financial', 'name of the model')
 cmd:option('-network', 'trainning_dqn', 'load pretrained network')
 cmd:option('-agent', 'NeuralQLearner', 'name of agent file to use')
 cmd:option('-agent_params', 'lr=0.00025,ep=1,ep_end=0.1,ep_endt=1000000,discount=0.99,hist_len=1,learn_start=50,replay_memory=1000000,update_freq=4,n_replay=1,'..
-                   'network=\'convnet_atari3\',preproc=\"net_downsample_2x_full_y\",state_dim=12,'..
+                   'network=\'convnet_atari3\',preproc=\"net_downsample_2x_full_y\",state_dim=22,'..
                    'minibatch_size=32,rescale_r=1,bufferSize=45,valid_size=30,target_q=10000,clip_delta=1,min_reward=-1,max_reward=1', 'string of agent parameters')
 cmd:option('-seed', 1, 'fixed input seed for repeatable experiments')
 cmd:option('-saveNetworkParams', false,'saves the agent network in a separate file')
-cmd:option('-prog_freq', 10000, 'frequency of progress output')
+cmd:option('-prog_freq', 100000, 'frequency of progress output')
 cmd:option('-save_freq', 125, 'the model is saved every save_freq steps')
 cmd:option('-eval_freq', 250, 'frequency of greedy evaluation')
 cmd:option('-save_versions', 0, '')
-cmd:option('-steps', 10, 'the size of the testset')
+cmd:option('-steps',600000, 'the size of the testset')
 cmd:option('-eval_steps', 125, 'number of evaluation steps')
 cmd:option('-verbose', 2,'the higher the level, the more information is printed to screen')
 cmd:option('-threads', 2000, 'number of BLAS threads')
@@ -67,7 +67,9 @@ local total_reward
 local nrewards
 local nepisodes
 local episode_reward
-
+p_reward=0
+n_reward=0
+T_reward=0
 -- start a new game
 local state, reward, terminal = data_env:getState()
  print( "first state: ")
@@ -76,6 +78,14 @@ local state, reward, terminal = data_env:getState()
 print("Iteration ..", step)
 --local win = nil
 while step < opt.steps do
+    
+--    if opt.env ~='sin_data' then
+--       if env:shutdown() then
+--         print("no enough data...")
+--         break
+--       end
+--    end
+
     step = step + 1
     local action_index = agent:perceive(reward, state, terminal)
 
@@ -92,7 +102,7 @@ while step < opt.steps do
     else
           state, reward, terminal = env:newState()
     end
-
+   
     -- display screen
     --win = image.display({image=screen, win=win})
 
@@ -108,7 +118,7 @@ while step < opt.steps do
 
     if step % opt.eval_freq == 0 and step > learn_start then
 
-        state, reward, terminal = env:newState()
+        state, reward, terminal = env:getState()
         total_reward = 0
         nrewards = 0
         nepisodes = 0
@@ -117,7 +127,7 @@ while step < opt.steps do
         local eval_time = sys.clock()
         for estep=1,opt.eval_steps do
             local action_index = agent:perceive(reward, state, terminal, true, 0.05)
-
+--print('----',action_index,'----')
             -- in test mode (episodes don't end when losing a life)
         state, reward, terminal = env:Step(shb_actions[action_index])
 
@@ -131,12 +141,21 @@ while step < opt.steps do
             if reward ~= 0 then
                nrewards = nrewards + 1
             end
+            
+             if reward>0 then
+                     p_reward=p_reward+1
+             end
+             if reward<0 then
+                     n_reward=n_reward+1
+             end
+              T_reward=T_reward+reward
 
             if terminal then
                 total_reward = total_reward + episode_reward
                 episode_reward = 0
                 nepisodes = nepisodes + 1
-                state, reward, terminal = env:newState()
+                break
+               -- state, reward, terminal = env:newState()
             end
         end
 
@@ -214,4 +233,8 @@ while step < opt.steps do
         io.flush()
         collectgarbage()
     end
+     if step%1000 == 0 then
+            print("the num of +/- rewards is ", p_reward,n_reward,p_reward/(p_reward+n_reward))
+            print("average reward is ",T_reward/(p_reward+n_reward)) end
 end
+        print("Finished traning, close window to exit!")

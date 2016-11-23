@@ -44,6 +44,8 @@ function env:Testing_init(opt)
       self.lossRate=args.lossRate or 0.6      --if lose 40% stop
       self.Account=self.Account_All             --RMB
       self.max=args.max or 100
+      self.lever=1
+      self.cost=0
       self.price={}
       self.sindex={}
       self.shb={}
@@ -115,13 +117,13 @@ function env:TestStep(action)
 --        print ("reward=",self.hold_num,"X",dprice," = ",self.hold_num*dprice)
    
         --hold_num  = hold_num  + action 
-          local rw=self.hold_num  * dprice---action
+          local rw=self.hold_num  * dprice *self.lever -self.cost * math.abs(action) ---action
           self.trw=self.trw+rw
           self.own[sin_index]=self.trw/self.max
           
 --            print("before action",self.Account)
             --hold_num  = hold_num  + action --buy/hold/sell 1$ at point 12
-            self.Account  = self.Account  - action  * self.price[sin_index+points]
+            self.Account  = self.Account  - action  * self.price[sin_index+points] -self.cost * math.abs(action)
 --            print("after -",action,"X",self.price[sin_index+points],-action  * self.price[sin_index+points]," = ",self.Account)
 
    
@@ -144,8 +146,8 @@ function env:draw()
    local path='test'
    path=path..#self.action_index..'_noise_'..self.noise
     gnuplot.pngfigure('src/result/'..path..'.png')
---    gnuplot.plot({torch.Tensor(self.sindex), torch.Tensor(self.price)},{torch.Tensor(self.action_index), torch.Tensor(self.shb)} , {torch.Tensor(self.action_index),torch.Tensor(self.own)})
-    gnuplot.plot({torch.Tensor(self.sindex), torch.Tensor(self.price)}, {torch.Tensor(self.action_index),torch.Tensor(self.own)})
+    gnuplot.plot({torch.Tensor(self.sindex), torch.Tensor(self.price)},{torch.Tensor(self.action_index), torch.Tensor(self.shb)} , {torch.Tensor(self.action_index),torch.Tensor(self.own)})
+--    gnuplot.plot({torch.Tensor(self.sindex), torch.Tensor(self.price)}, {torch.Tensor(self.action_index),torch.Tensor(self.own)})
     gnuplot.plotflush()
 end
 
@@ -165,14 +167,17 @@ function env:FX_init(opt)
       self.lossRate=args.lossRate or 0.6      --if lose 40% stop
       self.Account=self.Account_All             --RMB
       self.max=args.max or 100
+      self.lever=1
+      self.cost=0.07
       self.price={}
       self.sindex={}
       self.shb={}
       self.trw=0
       self.own={} 
       self.action_index={}
-      local data=load:data_loading(opt)
+      local data,num=load:data_loading(opt)
       self.data=data:select(2,3)
+      self.data_num=num
       
       for i=1,self.points do 
           self.price[i]=self.data[i]
@@ -190,10 +195,15 @@ function env:FX_Step(action)
       self.shb[fx_index]=action+1+1-----plot
       self.sindex[fx_index+points]=fx_index
       self.action_index[fx_index]=fx_index
+     
+     local data_index=fx_index+points
+     if env:shutdown() then --循环训练数据
+         data_index=data_index%self.data_num+1
+      end
     
       --next time price
-      self.price[fx_index+points]=self.data[fx_index+points]
-   
+      self.price[fx_index+points]=self.data[data_index]
+
       local terminal =  false
       local dprice  = self.price[fx_index+points]-self.price[fx_index+points-1]
         
@@ -222,18 +232,18 @@ function env:FX_Step(action)
 --        print ("reward=",self.hold_num,"X",dprice," = ",self.hold_num*dprice)
    
         --hold_num  = hold_num  + action 
-          local rw=self.hold_num  * dprice---action
+          local rw=self.hold_num  * dprice *self.lever -self.cost * math.abs(action)   ---action
           self.trw=self.trw+rw
           self.own[fx_index]=self.trw/self.max
           
 --            print("before action",self.Account)
             --hold_num  = hold_num  + action --buy/hold/sell 1$ at point 12
-            self.Account  = self.Account  - action  * self.price[fx_index+points]
+            self.Account  = self.Account  - action  * self.price[fx_index+points] -self.cost * math.abs(action)
 --            print("after -",action,"X",self.price[sin_index+points],-action  * self.price[sin_index+points]," = ",self.Account)
 
    
           local Tensor = torch.Tensor(points+2,1):fill(0.01)
-          Tensor[{{1,points},1}]=self.data:sub(fx_index+1,fx_index+points)
+          Tensor[{{1,points},1}]=torch.Tensor(self.price):sub(fx_index+1,fx_index+points)
           
             Tensor[points+1]  = self.hold_num
             local tmp=self.Account  + self.hold_num  * self.price[fx_index+points]
@@ -284,4 +294,12 @@ function env:newState()
       else
              return self:AnotherFXState()
       end
+end
+
+function env:shutdown()
+      if #self.price>=self.data_num then 
+         return true
+      else
+         return false
+      end 
 end

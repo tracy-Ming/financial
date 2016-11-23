@@ -148,7 +148,7 @@ function setup(args)
       args=torchSetup(args)
       --dqn:myinfo()
       baseline:myinfo()
-      local data_env=env:Testing_init(args.env_params) --传参需要修改，规范
+      local data_env=env:Testing_init(args) --传参需要修改，规范
       local action=data_env:get_TestAction()
       --local agent=dqn["NeuralQLearner"](args)
       local agent=baseline:baseInit(args.agent_params)
