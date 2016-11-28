@@ -1,5 +1,5 @@
 dqn={}
---require 'initenv'
+require 'initenv'
 --local agent=dqn["initenv"]()
 --agent:myinfo()
 a= b or 4
