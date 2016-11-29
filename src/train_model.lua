@@ -14,7 +14,7 @@ cmd:text('Train Agent in Environment:')
 cmd:text()
 cmd:text('Options:')
 cmd:option('-env', 'sin_data', 'name of environment to use')
-cmd:option('-env_params', 'points=20,dt=0.05,sin_index=0,noise=0,hold_num=0,Account_All=3000,lossRate=0.6,max=500', 'string of environment parameters')
+cmd:option('-env_params', 'points=10,dt=0.05,sin_index=0,noise=0,hold_num=0,Account_All=3000,lossRate=0.6,max=500', 'string of environment parameters')
 cmd:option('-filepath', 'EURUSD60_train.csv', 'FX_data used to')
 --cmd:option('-env_params', 'ep_endt=1000000,discount=0.99,learn_start=50000', 'string of environment parameters')
 --cmd:option('-pool_frms', '','string of frame pooling parameters (e.g.: size=2,type="max")')
@@ -23,7 +23,7 @@ cmd:option('-name', 'dqn_financial', 'name of the model')
 cmd:option('-network', 'trainning_dqn', 'load pretrained network')
 cmd:option('-agent', 'NeuralQLearner', 'name of agent file to use')
 cmd:option('-agent_params', 'lr=0.00025,ep=1,ep_end=0.1,ep_endt=1000000,discount=0.99,hist_len=1,learn_start=50,replay_memory=1000000,update_freq=4,n_replay=1,'..
-                   'network=\'convnet_atari3\',preproc=\"net_downsample_2x_full_y\",state_dim=22,'..
+                   'network=\'convnet_atari3\',preproc=\"net_downsample_2x_full_y\",state_dim=12,'..
                    'minibatch_size=32,rescale_r=1,bufferSize=45,valid_size=30,target_q=10000,clip_delta=1,min_reward=-1,max_reward=1', 'string of agent parameters')
 cmd:option('-seed', 1, 'fixed input seed for repeatable experiments')
 cmd:option('-saveNetworkParams', false,'saves the agent network in a separate file')
