@@ -4,7 +4,7 @@ require 'Rectifier'
 
 function cnn_config()
     local args={}
-    args.input_dims={1,12,1}
+    args.input_dims={1,42,1}
     args.n_units        = {6, 16}
     args.filter_size    = {8, 2}
     args.filter_size_v = {1, 1}

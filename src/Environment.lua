@@ -168,13 +168,17 @@ function env:FX_init(opt)
       self.Account=self.Account_All             --RMB
       self.max=args.max or 100
       self.lever=1
-      self.cost=0.07
+      self.cost=0
       self.price={}
       self.sindex={}
       self.shb={}
       self.trw=0
       self.own={} 
+      self.rw={}
       self.action_index={}
+      self.maxdown=100
+      self.maxdown_action=0
+      self.epochs=0
       local data,num=load:data_loading(opt)
       self.data=data:select(2,3)
       self.data_num=num
@@ -203,7 +207,7 @@ function env:FX_Step(action)
     
       --next time price
       self.price[fx_index+points]=self.data[data_index]
-
+      if (fx_index+points)%10000==0  then print(fx_index+points)end
       local terminal =  false
       local dprice  = self.price[fx_index+points]-self.price[fx_index+points-1]
         
@@ -235,7 +239,11 @@ function env:FX_Step(action)
           local rw=self.hold_num  * dprice *self.lever -self.cost * math.abs(action)   ---action
           self.trw=self.trw+rw
           self.own[fx_index]=self.trw/self.max
-          
+          self.rw[fx_index]=rw
+          if  fx_index>=2 and rw-self.rw[fx_index-1] <=self.maxdown  then
+              self.maxdown=rw-self.rw[fx_index-1]
+              self.maxdown_action= self.shb[fx_index-1]
+           end
 --            print("before action",self.Account)
             --hold_num  = hold_num  + action --buy/hold/sell 1$ at point 12
             self.Account  = self.Account  - action  * self.price[fx_index+points] -self.cost * math.abs(action)

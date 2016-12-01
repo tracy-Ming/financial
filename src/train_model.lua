@@ -13,8 +13,8 @@ cmd:text()
 cmd:text('Train Agent in Environment:')
 cmd:text()
 cmd:text('Options:')
-cmd:option('-env', 'sin_data', 'name of environment to use')
-cmd:option('-env_params', 'points=10,dt=0.05,sin_index=0,noise=0,hold_num=0,Account_All=3000,lossRate=0.6,max=500', 'string of environment parameters')
+cmd:option('-env', 'sin_dat', 'name of environment to use')
+cmd:option('-env_params', 'points=40,dt=0.05,sin_index=0,noise=0,hold_num=0,Account_All=3000,lossRate=0.6,max=500', 'string of environment parameters')
 cmd:option('-filepath', 'EURUSD60_train.csv', 'FX_data used to')
 --cmd:option('-env_params', 'ep_endt=1000000,discount=0.99,learn_start=50000', 'string of environment parameters')
 --cmd:option('-pool_frms', '','string of frame pooling parameters (e.g.: size=2,type="max")')
@@ -23,7 +23,7 @@ cmd:option('-name', 'dqn_financial', 'name of the model')
 cmd:option('-network', 'trainning_dqn', 'load pretrained network')
 cmd:option('-agent', 'NeuralQLearner', 'name of agent file to use')
 cmd:option('-agent_params', 'lr=0.00025,ep=1,ep_end=0.1,ep_endt=1000000,discount=0.99,hist_len=1,learn_start=50,replay_memory=1000000,update_freq=4,n_replay=1,'..
-                   'network=\'convnet_atari3\',preproc=\"net_downsample_2x_full_y\",state_dim=12,'..
+                   'network=\'convnet_atari3\',preproc=\"net_downsample_2x_full_y\",state_dim=42,'..
                    'minibatch_size=32,rescale_r=1,bufferSize=45,valid_size=30,target_q=10000,clip_delta=1,min_reward=-1,max_reward=1', 'string of agent parameters')
 cmd:option('-seed', 1, 'fixed input seed for repeatable experiments')
 cmd:option('-saveNetworkParams', false,'saves the agent network in a separate file')
@@ -70,6 +70,7 @@ local episode_reward
 p_reward=0
 n_reward=0
 T_reward=0
+epoch_info=""
 -- start a new game
 local state, reward, terminal = data_env:getState()
  print( "first state: ")
@@ -78,18 +79,35 @@ local state, reward, terminal = data_env:getState()
 print("Iteration ..", step)
 --local win = nil
 while step < opt.steps do
-    
---    if opt.env ~='sin_data' then
---       if env:shutdown() then
---         print("no enough data...")
---         break
---       end
---    end
+ --record each epoch result   
+    if opt.env ~='sin_data' then
+       if env:shutdown() then
+          if (#env.price)%(env.data_num)==0  then
+                   env.epochs=math.ceil( (#env.price)/env.data_num)
+--                   torch.save(opt.name ..math.ceil( (#env.price)/env.data_num).. ".t7", {agent = agent,
+--                                model = agent.network,
+--                                best_model = agent.best_network,
+--                                reward_history = reward_history,
+--                                reward_counts = reward_counts,
+--                                episode_counts = episode_counts,
+--                                time_history = time_history,
+--                                v_history = v_history,
+--                                td_history = td_history,
+--                                qmax_history = qmax_history,
+--                                arguments=opt})
+                        epoch_info=epoch_info.."----epoch:  "..env.epochs.."---------------------------------------------------\n".. 
+                        "the num of +/- rewards is "..p_reward..n_reward..p_reward/(p_reward+n_reward).."\n"..
+                        "total reward is "..T_reward.."\n"..
+                        "average reward is "..T_reward/(p_reward+n_reward).."\n"..
+                        "maxdown_reward and action are "..env.maxdown.."---"..env.maxdown_action.."\n"                     
+          end
+       end
+    end
 
     step = step + 1
     local action_index = agent:perceive(reward, state, terminal)
 
-    print ("opt.itera: ",step)
+ --   print ("opt.itera: ",step)
 --    print("action: ",shb_actions[action_index])
 
     if not terminal then
@@ -117,7 +135,6 @@ while step < opt.steps do
     if step%1000 == 0 then collectgarbage() end
 
     if step % opt.eval_freq == 0 and step > learn_start then
-
         state, reward, terminal = env:getState()
         total_reward = 0
         nrewards = 0
@@ -126,8 +143,33 @@ while step < opt.steps do
 
         local eval_time = sys.clock()
         for estep=1,opt.eval_steps do
+        --record each epoch result   
+            if opt.env ~='sin_data' then
+               if env:shutdown() then
+                  if (#env.price)%(env.data_num)==0  then
+                           env.epochs=math.ceil( (#env.price)/env.data_num)
+--                           torch.save(opt.name ..math.ceil( (#env.price)/env.data_num).. ".t7", {agent = agent,
+--                                        model = agent.network,
+--                                        best_model = agent.best_network,
+--                                        reward_history = reward_history,
+--                                        reward_counts = reward_counts,
+--                                        episode_counts = episode_counts,
+--                                        time_history = time_history,
+--                                        v_history = v_history,
+--                                        td_history = td_history,
+--                                        qmax_history = qmax_history,
+--                                        arguments=opt})
+                        epoch_info=epoch_info.."----epoch:  "..env.epochs.."---------------------------------------------------\n".. 
+                        "the num of +/- rewards is "..p_reward..n_reward..p_reward/(p_reward+n_reward).."\n"..
+                        "total reward is "..T_reward.."\n"..
+                        "average reward is "..T_reward/(p_reward+n_reward).."\n"..
+                        "maxdown_reward and action are "..env.maxdown.."---"..env.maxdown_action.."\n"
+                  end
+               end
+            end
+    
             local action_index = agent:perceive(reward, state, terminal, true, 0.05)
---print('----',action_index,'----')
+            --print('----',action_index,'----')
             -- in test mode (episodes don't end when losing a life)
         state, reward, terminal = env:Step(shb_actions[action_index])
 
@@ -233,8 +275,11 @@ while step < opt.steps do
         io.flush()
         collectgarbage()
     end
-     if step%1000 == 0 then
-            print("the num of +/- rewards is ", p_reward,n_reward,p_reward/(p_reward+n_reward))
-            print("average reward is ",T_reward/(p_reward+n_reward)) end
+--     if step%1000 == 0 then
+--            print("the num of +/- rewards is ", p_reward,n_reward,p_reward/(p_reward+n_reward))
+--            print("average reward is ",T_reward/(p_reward+n_reward)) end
 end
+local epoch_file = io.open("epoch_info.txt","w")
+epoch_file:write(epoch_info)
+epoch_file:close()
         print("Finished traning, close window to exit!")
