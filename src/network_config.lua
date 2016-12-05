@@ -4,17 +4,16 @@ require 'Rectifier'
 
 function cnn_config()
     local args={}
-    args.input_dims={1,42,1}
-    args.n_units        = {6, 16}
-    args.filter_size    = {8, 2}
-    args.filter_size_v = {1, 1}
-    args.filter_stride  = {1, 1}
---    args.n_units        = {32, 64, 64}
---    args.filter_size    = {2, 2, 2}
---    args.filter_stride  = {1, 1, 1}
---    args.filter_size    = {8, 4, 3}
---    args.filter_stride  = {4, 2, 1}
-    args.n_hid          = {72}
+    args.input_dims={1,202,1}
+--    args.n_units        = {6, 16}
+--    args.filter_size    = {8, 2}
+--    args.filter_size_v = {1, 1}
+--    args.filter_stride  = {1, 1}
+    args.n_units        = {32, 64, 64}
+    args.filter_size_v  = {1, 1, 1}
+    args.filter_size    = {8, 4, 3}
+    args.filter_stride  = {4, 2, 1}
+    args.n_hid          = {512}
     args.nl             = nn.Rectifier
      
     return create_network(args)
