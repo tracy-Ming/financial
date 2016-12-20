@@ -80,7 +80,7 @@ print("Iteration ..", step)
 --local win = nil
 while step < opt.steps do
  --record each epoch result   
- --[[   if opt.env ~='sin_data' then
+    if opt.env ~='sin_data' then
        if env:shutdown() then
           if (#env.price)%(env.data_num)==0  then
                    env.epochs=math.ceil( (#env.price)/env.data_num)
@@ -108,7 +108,7 @@ while step < opt.steps do
           end
        end
     end
-]]
+
     step = step + 1
     local action_index = agent:perceive(reward, state, terminal)
 
@@ -149,7 +149,7 @@ while step < opt.steps do
         local eval_time = sys.clock()
         for estep=1,opt.eval_steps do
         --record each epoch result   
-    --[[        if opt.env ~='sin_data' then
+            if opt.env ~='sin_data' then
                if env:shutdown() then
                   if (#env.price)%(env.data_num)==0  then
                            env.epochs=math.ceil( (#env.price)/env.data_num)
@@ -177,7 +177,7 @@ while step < opt.steps do
                   end
                end
             end
-    ]]
+    
             local action_index = agent:perceive(reward, state, terminal, true, 0.05)
             --print('----',action_index,'----')
             -- in test mode (episodes don't end when losing a life)
@@ -289,7 +289,7 @@ while step < opt.steps do
 --            print("the num of +/- rewards is ", p_reward,n_reward,p_reward/(p_reward+n_reward))
 --            print("average reward is ",T_reward/(p_reward+n_reward)) end
 end
---local epoch_file = io.open("epoch_info.txt","w")
---epoch_file:write(epoch_info)
---epoch_file:close()
+local epoch_file = io.open("epoch_info.txt","w")
+epoch_file:write(epoch_info)
+epoch_file:close()
         print("Finished traning, close window to exit!")
