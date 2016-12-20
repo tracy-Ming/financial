@@ -70,7 +70,7 @@ local episode_reward
 p_reward=0
 n_reward=0
 T_reward=0
-epoch_info="a"
+epoch_info=""
 -- start a new game
 local state, reward, terminal = data_env:getState()
  print( "first state: ")
