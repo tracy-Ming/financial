@@ -13,8 +13,8 @@ cmd:text()
 cmd:text('Train Agent in Environment:')
 cmd:text()
 cmd:text('Options:')
-cmd:option('-env', 'sin_dat', 'name of environment to use')
-cmd:option('-env_params', 'points=200,dt=0.05,sin_index=0,noise=0,hold_num=0,Account_All=3000,lossRate=0.6,max=500', 'string of environment parameters')
+cmd:option('-env', 'sin_data', 'name of environment to use')
+cmd:option('-env_params', 'points=20,dt=0.05,sin_index=0,noise=0,hold_num=0,Account_All=3000,lossRate=0.6,max=500', 'string of environment parameters')
 cmd:option('-filepath', 'EURUSD60_train.csv', 'FX_data used to')
 --cmd:option('-env_params', 'ep_endt=1000000,discount=0.99,learn_start=50000', 'string of environment parameters')
 --cmd:option('-pool_frms', '','string of frame pooling parameters (e.g.: size=2,type="max")')
@@ -23,7 +23,7 @@ cmd:option('-name', 'dqn_financial', 'name of the model')
 cmd:option('-network', 'trainning_dqn', 'load pretrained network')
 cmd:option('-agent', 'NeuralQLearner', 'name of agent file to use')
 cmd:option('-agent_params', 'lr=0.00025,ep=1,ep_end=0.1,ep_endt=1000000,discount=0.99,hist_len=1,learn_start=50,replay_memory=1000000,update_freq=4,n_replay=1,'..
-                   'network=\'convnet_atari3\',preproc=\"net_downsample_2x_full_y\",state_dim=202,'..
+                   'network=\'convnet_atari3\',preproc=\"net_downsample_2x_full_y\",state_dim=22,'..
                    'minibatch_size=32,rescale_r=1,bufferSize=45,valid_size=30,target_q=10000,clip_delta=1,min_reward=-1,max_reward=1', 'string of agent parameters')
 cmd:option('-seed', 1, 'fixed input seed for repeatable experiments')
 cmd:option('-saveNetworkParams', false,'saves the agent network in a separate file')
@@ -80,7 +80,7 @@ print("Iteration ..", step)
 --local win = nil
 while step < opt.steps do
  --record each epoch result   
-    if opt.env ~='sin_data' then
+ --[[   if opt.env ~='sin_data' then
        if env:shutdown() then
           if (#env.price)%(env.data_num)==0  then
                    env.epochs=math.ceil( (#env.price)/env.data_num)
@@ -108,7 +108,7 @@ while step < opt.steps do
           end
        end
     end
-
+]]
     step = step + 1
     local action_index = agent:perceive(reward, state, terminal)
 
@@ -149,7 +149,7 @@ while step < opt.steps do
         local eval_time = sys.clock()
         for estep=1,opt.eval_steps do
         --record each epoch result   
-            if opt.env ~='sin_data' then
+    --[[        if opt.env ~='sin_data' then
                if env:shutdown() then
                   if (#env.price)%(env.data_num)==0  then
                            env.epochs=math.ceil( (#env.price)/env.data_num)
@@ -177,7 +177,7 @@ while step < opt.steps do
                   end
                end
             end
-    
+    ]]
             local action_index = agent:perceive(reward, state, terminal, true, 0.05)
             --print('----',action_index,'----')
             -- in test mode (episodes don't end when losing a life)
@@ -289,7 +289,7 @@ while step < opt.steps do
 --            print("the num of +/- rewards is ", p_reward,n_reward,p_reward/(p_reward+n_reward))
 --            print("average reward is ",T_reward/(p_reward+n_reward)) end
 end
-local epoch_file = io.open("epoch_info.txt","w")
-epoch_file:write(epoch_info)
-epoch_file:close()
+--local epoch_file = io.open("epoch_info.txt","w")
+--epoch_file:write(epoch_info)
+--epoch_file:close()
         print("Finished traning, close window to exit!")
