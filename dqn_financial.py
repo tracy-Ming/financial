@@ -1,4 +1,6 @@
 #coding=utf-8
+#1060,done, took 2729.434 seconds
+#k-80,done, took 11504.376 seconds
 from __future__ import division
 import argparse
 
@@ -17,6 +19,7 @@ from rl.memory import SequentialMemory
 from rl.core import Processor
 from rl.callbacks import FileLogger, ModelIntervalCheckpoint
 import financial_env
+import financial_env_for_simulation
 
 #input_data size (20+2)*1
 INPUT_SHAPE = (22, 1)
@@ -31,12 +34,17 @@ class financialProcessor(Processor):
 parser = argparse.ArgumentParser()
 parser.add_argument('--mode', choices=['train', 'test'], default='train')
 parser.add_argument('--env-name', type=str, default='sin_data')
+parser.add_argument('--training-path', type=str, default='EURUSD60_train.csv')
+parser.add_argument('--testing-path', type=str, default='EURUSD60_test.csv')
 parser.add_argument('--env-params', type=str, default='points=20,dt=0.05,sin_index=0,noise=0,hold_num=0,Account_All=3000,lossRate=0.6,max=500')
 parser.add_argument('--weights', type=str, default=None)
 args = parser.parse_args()
 
 # Get the environment and extract the number of actions.
-env = financial_env.financialEnv(args.env_params)
+if args.env_name=='sin_data':
+    env = financial_env_for_simulation.simulationEnv(args.env_params)
+else:
+    env=financial_env.financialEnv(args.env_params,args.training_path)
 np.random.seed(123)
 #env.seed(123)
 nb_actions = env.action_space.n
@@ -124,4 +132,5 @@ elif args.mode == 'test':
     if args.weights:
         weights_filename = args.weights
     dqn.load_weights(weights_filename)
-    dqn.test(env, nb_episodes=10, visualize=True)
+    dqn.test(env, nb_episodes=10, visualize=False)
+
