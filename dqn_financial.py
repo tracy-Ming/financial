@@ -9,7 +9,7 @@ import numpy as np
 import gym
 
 from keras.models import Sequential
-from keras.layers import Dense, Activation, Flatten, Convolution2D, Permute
+from keras.layers import Dense, Activation, Flatten, Convolution2D, Permute,LSTM,Reshape,Merge,Dropout,Highway
 from keras.optimizers import Adam
 import keras.backend as K
 
@@ -21,8 +21,10 @@ from rl.callbacks import FileLogger, ModelIntervalCheckpoint
 import financial_env
 import financial_env_for_simulation
 
+price_len=20
+
 #input_data size (20+2)*1
-INPUT_SHAPE = (22, 1)
+INPUT_SHAPE = (2+price_len, 1)  ##need to have some way to normalize the last 2 dimension
 WINDOW_LENGTH = 1
 
 class financialProcessor(Processor):
@@ -36,7 +38,7 @@ parser.add_argument('--mode', choices=['train', 'test'], default='train')
 parser.add_argument('--env-name', type=str, default='sin_data')
 parser.add_argument('--training-path', type=str, default='EURUSD60_train.csv')
 parser.add_argument('--testing-path', type=str, default='EURUSD60_test.csv')
-parser.add_argument('--env-params', type=str, default='points=20,dt=0.05,sin_index=0,noise=0,hold_num=0,Account_All=3000,lossRate=0.6,max=500')
+parser.add_argument('--env-params', type=str, default='points='+str(price_len)+',dt=0.05,sin_index=0,noise=0,hold_num=0,Account_All=3000,lossRate=0.6,max=500')
 parser.add_argument('--weights', type=str, default=None)
 args = parser.parse_args()
 
@@ -64,7 +66,10 @@ nb_actions = env.action_space.n
 # env._step = _step
 
 # Next, we build our model. We use the same model that was described by Mnih et al. (2015).
-input_shape = (WINDOW_LENGTH,) + INPUT_SHAPE
+input_shape = (WINDOW_LENGTH,)+INPUT_SHAPE
+print input_shape
+dropout_rate=0.5
+num_layers=3
 model = Sequential()
 if K.image_dim_ordering() == 'tf':
     # (width, height, channels)
@@ -74,17 +79,53 @@ elif K.image_dim_ordering() == 'th':
     model.add(Permute((1, 2, 3), input_shape=input_shape))
 else:
     raise RuntimeError('Unknown image_dim_ordering.')
-model.add(Convolution2D(32, 8, 1, subsample=(4, 4)))
-model.add(Activation('relu'))
-model.add(Convolution2D(64, 4, 1, subsample=(2, 2)))
-model.add(Activation('relu'))
-# model.add(Convolution2D(64, 3, 3, subsample=(1, 1)))
-# model.add(Activation('relu'))
-model.add(Flatten())
-model.add(Dense(512))
-model.add(Activation('relu'))
+#model.add(Convolution2D(32, 8, 1, subsample=(4, 4)))
+#model.add(Activation('relu'))
+#model.add(Convolution2D(64, 4, 1, subsample=(2, 2)))
+
+
+#####need to figure out how to provide two inputs
+#price_model=Sequential()
+##price_model.add(Reshape(INPUT_SHAPE, input_shape=input_shape)) ###change
+#input_shape1=(price_len,1)
+#price_model.add(Permute((2, 1), input_shape=input_shape1))
+#price_model.add(LSTM(64))
+#
+#
+#holding_model=Sequential()
+#input_shape2=(input_shape[0]-price_len,1)
+#holding_model.add(Permute((2, 1), input_shape=input_shape2 ))
+##price_model.add(Reshape(INPUT_SHAPE, input_shape=input_shape)) ###change
+#holding_model.add(Dense(10 ))
+#holding_model.add(Activation('relu'))
+#holding_model.add(Flatten())
+#
+#model = Sequential()
+#model.add(Merge([price_model, holding_model], mode='concat'))
+#model.add(Reshape(INPUT_SHAPE, input_shape=input_shape))
+#model.add(LSTM(64))
+
+
+useHighway=True
+
+if useHighway:
+	model.add(Dense(5))
+	model.add(Flatten())
+	for index in range(num_layers):
+	    model.add(Highway(activation = 'relu'))
+	    model.add(Dropout(dropout_rate))
+else: #CNN
+	model.add(Convolution2D(32, 8, 1, subsample=(4, 4)))
+	model.add(Activation('relu'))
+	model.add(Convolution2D(64, 4, 1, subsample=(2, 2)))
+	model.add(Activation('relu'))
+	model.add(Flatten())
+	model.add(Dense(51))
+	model.add(Activation('relu'))
+	
 model.add(Dense(nb_actions))
-model.add(Activation('linear'))
+model.add(Activation('softmax')) 
+#model.add(Activation('linear'))
 print(model.summary())
 
 # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
@@ -97,13 +138,12 @@ processor = financialProcessor()
 # the agent initially explores the environment (high eps) and then gradually sticks to what it knows
 # (low eps). We also set a dedicated eps value that is used during testing. Note that we set it to 0.05
 # so that the agent still performs some random actions. This ensures that the agent cannot get stuck.
-policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., value_min=.1, value_test=.05,
-                              nb_steps=1000000)
+policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., value_min=.1, value_test=.05, nb_steps=1000000)
 
 # The trade-off between exploration and exploitation is difficult and an on-going research topic.
 # If you want, you can experiment with the parameters or use a different policy. Another popular one
 # is Boltzmann-style exploration:
-# policy = BoltzmannQPolicy(tau=1.)
+#policy = BoltzmannQPolicy(tau=1.)
 # Feel free to give it a try!
 
 dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
@@ -119,8 +159,7 @@ if args.mode == 'train':
     log_filename = 'dqn_{}_log.json'.format(args.env_name)
     callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=250000)]
     callbacks += [FileLogger(log_filename, interval=100)]
-    print type(env)
-    dqn.fit(env, callbacks=callbacks, nb_steps=1750000, log_interval=10000)
+    dqn.fit(env, callbacks=callbacks, nb_steps=17500000, log_interval=60000)
 
     # After training is done, we save the final weights one more time.
     dqn.save_weights(weights_filename, overwrite=True)
@@ -133,4 +172,3 @@ elif args.mode == 'test':
         weights_filename = args.weights
     dqn.load_weights(weights_filename)
     dqn.test(env, nb_episodes=10, visualize=False)
-

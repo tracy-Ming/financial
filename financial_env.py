@@ -13,21 +13,24 @@ class financialEnv(gym.Env):
     def __init__(self,opt,filepath):
         self._opt=str_to_dic(opt)
         args=self._opt
-        self.points = int(args['points']) or 10 #数据点
+        self.points = int(args['points']) or 100 #数据点
         self.fx_index = 0
         self.hold_num = args['hold_num'] or 0
-        self.Account_All = args['Account_All'] or 100
+        self.Account_All = args['Account_All'] or 3000
         self.lossRate = args['lossRate'] or 0.6
         self.Account = self.Account_All
         self.max = args['max'] or 100
-        self.lever = 1
-        self.cost = 0
+	minimum_order=1000 #### usually minimum order is 0.01 lot size =1000
+        self.lever = 500*minimum_order ####because action unit is 1, so I combine minmum_order with leverage
+        self.cost = 0.035
+	self.swap=0.01/60/24/self.lever*(500*1000)  ### each day interest rate is 0.01 for 0.01 lot and 500 leverage , and here it is the rate for each minute
         self.price = []
         self.sindex = []
         self.shb = []
         self.trw = 0
-        self.own = []
+        self.own = []  ###what is this?
         self.rw=[]
+	self.lastactiontime=0
         self.action_index = []
         self.maxdown=100
         self.maxdown_action=0
@@ -38,7 +41,7 @@ class financialEnv(gym.Env):
             self.sindex.append(i - self.points+1)
         #print self.price[0]
         #self._seed()
-        self._action_set = [-1,0,1]
+        self._action_set = [-1,0,1]  ###define all possible action
         self.action_space = spaces.Discrete(len(self._action_set))
 
     def dataloading(self,filepath):
@@ -65,43 +68,43 @@ class financialEnv(gym.Env):
         self.price.append(self.data[data_index])
 #差价
         dprice = self.price[fx_index + points-1] - self.price[fx_index + points - 1-1]
-
         if action == -1:
+	    self.lastactiontime=0
             if self.hold_num <= 0:
                 self.hold_num = self.hold_num + action
             if self.hold_num > 0:
-                action = action * np.abs(self.hold_num)
-                self.hold_num = 0
+                action = action * np.abs(self.hold_num)  ## number of open transction
+                self.hold_num = 0  ###close all the open transcation
         if action == 1:
+	    self.lastactiontime=0
             if self.hold_num < 0:
                 action = action * np.abs(self.hold_num)
                 self.hold_num = 0
             if self.hold_num >= 0:
                 self.hold_num = self.hold_num + action
+	self.lastactiontime+=1 ###cumulate when action=0
 #reward except cost
-        rw = self.hold_num * dprice * self.lever - self.cost * np.abs(action)
-        self.trw = self.trw + rw
-        self.own.append(self.trw / self.max)
-        self.Account = self.Account - action * self.price[fx_index + points-1] - self.cost * np.abs(action)
+        rw = self.hold_num * dprice * self.lever - self.cost * np.abs(action) -self.swap*np.abs(self.hold_num)
+        self.trw = self.trw + rw  ###total reward
+        self.own.append(self.trw / self.max) 
+        #self.Account = self.Account - action * self.price[fx_index + points-1] - self.cost * np.abs(action)
+	self.Account = self.Account + rw - self.cost * np.abs(action)
 
         sinTensor=self.price[fx_index:fx_index+points]
-        sinTensor.append(self.hold_num)
-        tmp = self.Account + self.hold_num * self.price[fx_index + points-1]
-        sinTensor.append(tmp)
-        if tmp < self.Account_All * (1 - self.lossRate):
+        sinTensor.append(self.hold_num*self.lever*0.0001/self.Account)   ### scale to percentage of balance in use , 0.0001 is 1 pip for EURUSD 
+        #tmp = self.Account + self.hold_num * self.price[fx_index + points-1]
+        sinTensor.append(self.Account/self.Account_All) ### use ratio instead of absolute value
+        if self.Account < self.Account_All * (1 - self.lossRate):
             terminal = True
         sinTensor = np.asarray(sinTensor)
         return sinTensor.reshape(points+2,1), rw, terminal, {}
+	#return [sinTensor[:points].reshape(points,1),sinTensor[points:].reshape(2,1) ], rw, terminal, {}
 
     # return: (states, observations)
     def reset(self):
         self.hold_num=0
         self.Account=self.Account_All
         return self.step(0)
-
-    def get_obs(self):
-        obs=np.asarray(self.price[0:self.points+2])
-        return obs.reshape(self.points+2,1)
 
     def get_action_meanings(self):
         return [ACTION_MEANING[i] for i in self._action_set]
@@ -147,4 +150,3 @@ ACTION_MEANING = {
     16 : "DOWNRIGHTFIRE",
     17 : "DOWNLEFTFIRE",
 }
-
