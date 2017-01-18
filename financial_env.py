@@ -76,7 +76,15 @@ class financialEnv(gym.Env):
 #next price point
         data_index=fx_index+points-1
         if data_index>self.data_num-1:
-            data_index=data_index%self.data_num
+            #data_index=data_index%self.data_numm
+            terminal=True
+            self.hold_num = 0
+            self.Account = self.Account_All
+            self.fx_index=0
+            obs=self.price[0:points]
+            obs.append(0)
+            obs.append(1)
+            return np.asarray(obs).reshape(points+2,1),0,terminal,{}
         self.price.append(self.data[data_index])
 
 #price-plot

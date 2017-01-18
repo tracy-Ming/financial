@@ -21,7 +21,7 @@ from rl.callbacks import FileLogger, ModelIntervalCheckpoint, TrainIntervalLogge
 from keras.callbacks import Callback
 import financial_env
 import financial_env_for_simulation
-
+from keras.layers.convolutional_recurrent import ConvLSTM2D
 price_len = 20
 
 # input_data size (20+2)*1
@@ -38,16 +38,16 @@ class financialProcessor(Processor):
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--mode', choices=['train', 'test'], default='train')
-parser.add_argument('--env-name', type=str, default='sin_data')
+parser.add_argument('--env-name', type=str, default='real')
 parser.add_argument('--training-path', type=str, default='EURUSD60_train.csv')
 parser.add_argument('--testing-path', type=str, default='EURUSD60_test.csv')
-parser.add_argument('--env-params', type=str, default='points=' + str(price_len) + ',dt=0.05,sin_index=0,noise=0,hold_num=0,Account_All=3000,lossRate=0.6,max=5000')
-parser.add_argument('--weights', type=str, default=None)
-parser.add_argument('--update', type=str, default='n')
+parser.add_argument('--env-params', type=str, default='points=' + str(price_len) + ',dt=0.05,sin_index=0,noise=0,hold_num=0,Account_All=3000,lossRate=0.6,max=40000')
+parser.add_argument('--weights', type=str, default=None)#
+parser.add_argument('--update', type=str, default='n')#update the model when update=y
 args = parser.parse_args()
 
 # Get the environment and extract the number of actions.
-if args.env_name == 'sin_data':
+if args.env_name != 'real':
     env = financial_env_for_simulation.simulationEnv(args.env_params)
 else:
     env = financial_env.financialEnv(args.env_params, args.training_path)
@@ -177,7 +177,7 @@ class eps_History(Callback):
         if self.step % self.interval == 0:
             # print "*-*----*-*-*-*-*-*-*-*-*-*-"
             # print len(self.episode_rewards)
-            if len(self.episode_rewards) > 0:
+            #if len(self.episode_rewards) > 0:
                 print "+/- rewards are",self.p_reward," / ",self.n_reward," / ",self.p_reward/(self.p_reward+self.n_reward+0.00001)
                 print "total reward is ",self.T_reward
                 print "average reward is ",self.T_reward/self.interval
@@ -185,7 +185,7 @@ class eps_History(Callback):
                 print "maxdown action is ",self.maxdown_action
                 # print self.price.__len__()
                 print ''
-            self.reset()
+                self.reset()
 
 
     def on_step_end(self, step, logs):
@@ -220,8 +220,10 @@ if args.mode == 'train':
     if args.update == 'y':
         if args.weights:
             weights_filename = args.weights
+            print weights_filename
         dqn.load_weights(weights_filename)
-    dqn.fit(env, callbacks=callbacks, nb_steps=17500000, log_interval=60000)
+        print 'loading model successfully!'
+    dqn.fit(env, callbacks=callbacks, nb_steps=1750000, log_interval=60000)
 
     # After training is done, we save the final weights one more time.
     dqn.save_weights(weights_filename, overwrite=True)
@@ -240,14 +242,16 @@ elif args.mode == 'test':
     # gp('set terminal x11 size 350,225')
     # gp('set pointsize 2')
     # gp('set yrange [0.0:0.05]')
-    plot1 = Gnuplot.PlotItems.Data(env.price_data, with_="linespoints lt rgb 'green' lw 6 pt 1", title="price")
-    plot2 = Gnuplot.PlotItems.Data(env.action_data, with_="linespoints lt rgb 'blue' lw 6 pt 1", title="action")
-    plot3 = Gnuplot.PlotItems.Data(env.treward_data, with_="linespoints lt rgb 'red' lw 6 pt 1", title="total_reward")
+    plot1 = Gnuplot.PlotItems.Data(env.price_data, with_="linespoints lt rgb 'green' lw 2 pt 7", title="price")
+    plot2 = Gnuplot.PlotItems.Data(env.action_data, with_="linespoints lt rgb 'blue' lw 2 pt 7", title="action")
+    plot3 = Gnuplot.PlotItems.Data(env.treward_data, with_="linespoints lt rgb 'red' lw 2 pt 7", title="total_reward")
     gp.plot(plot3,plot2, plot1)
 
-    epsFilename = 'result.eps'
+    epsFilename = args.env_name+'.eps'
     gp.hardcopy(epsFilename, terminal='postscript', enhanced=1, color=1)  # must come after plot() function
     gp.reset()
+    x=np.random.uniform(0,1,22).reshape(22,1)
+    print dqn.forward(x)
 
     #
     # print env.price_data,len(env.price_data)
