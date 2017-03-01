@@ -50,7 +50,8 @@ args = parser.parse_args()
 if args.env_name != 'real':
     env = financial_env_for_simulation.simulationEnv(args.env_params)
 else:
-    env = financial_env.financialEnv(args.env_params, args.training_path)
+
+    env = financial_env.financialEnv(args.env_params, args.training_path,args.mode)
 np.random.seed(123)
 # env.seed(123)
 nb_actions = env.action_space.n
@@ -110,7 +111,7 @@ else:
 # model.add(LSTM(64))
 
 
-useHighway = True
+useHighway = False
 
 if useHighway:
     model.add(Dense(5))
@@ -235,7 +236,8 @@ elif args.mode == 'test':
     if args.weights:
         weights_filename = args.weights
     dqn.load_weights(weights_filename)
-    dqn.test(env, nb_episodes=10, visualize=False)
+    #dqn.test(env, nb_episodes=10, visualize=False)
+    dqn.test(env, nb_max_episode_steps=200000,visualize=False)
 
     import Gnuplot
     gp = Gnuplot.Gnuplot(persist=3)

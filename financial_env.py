@@ -10,8 +10,9 @@ import tensorflow as tf
 
 class financialEnv(gym.Env):
 
-    def __init__(self,opt,filepath):
+    def __init__(self,opt,filepath,mode):
         self._opt=str_to_dic(opt)
+        self.mode = mode
         args=self._opt
         self.points = int(args['points']) or 100 #数据点
         self.fx_index = 0
@@ -125,7 +126,7 @@ class financialEnv(gym.Env):
         sinTensor.append(self.hold_num*self.lever*0.0001/self.Account)   ### scale to percentage of balance in use , 0.0001 is 1 pip for EURUSD
         #tmp = self.Account + self.hold_num * self.price[fx_index + points-1]
         sinTensor.append(self.Account/self.Account_All) ### use ratio instead of absolute value
-        if self.Account < self.Account_All * (1 - self.lossRate):
+        if self.Account < self.Account_All * (1 - self.lossRate) and self.mode=="train":
             terminal = True
         sinTensor = np.asarray(sinTensor)
         return sinTensor.reshape(points+2,1), rw, terminal, {}
