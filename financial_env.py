@@ -50,13 +50,19 @@ class financialEnv(gym.Env):
         #self._seed()
         self._action_set = [-1,0,1]  ###define all possible action
         self.action_space = spaces.Discrete(len(self._action_set))
-
-
+    '''
+    #python2.7
     def dataloading(self,filepath):
         csvfile = np.loadtxt(filepath, dtype=np.str, delimiter=',')
         data = csvfile[0:, 2:].astype(np.float32)
         num=np.asarray(data).__len__()
         return np.asarray(data)[:,0],num
+    '''
+    def dataloading(self,filepath):
+        csvfile = np.loadtxt(filepath, usecols=(2,),dtype=np.float32, delimiter=',')
+        data = csvfile
+        num=np.asarray(data).__len__()
+        return np.asarray(data),num
 
     def step(self, a):
         pricetmp=[]
