@@ -8,3 +8,4 @@
   python dqn_financial.py --env-name real --training-path EURUSD60_train.csv,即——使用默认参数训练,默认使用数据集EURUSD60_train.csv</br>
  python dqn_financial.py --mode test --env-name real --testing-path EURUSD60_test.csv 
  ,就是测试模型，默认使用数据集EURUSD60_test.csv</br>
+#New Trader
