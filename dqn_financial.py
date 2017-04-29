@@ -23,6 +23,7 @@ import financial_env
 import financial_env_for_simulation
 from keras.layers.convolutional_recurrent import ConvLSTM2D
 price_len = 20
+add_another3D =3
 
 # input_data size (20+2)*1
 INPUT_SHAPE = (0 + price_len, 1)  ##need to have some way to normalize the last 2 dimension
@@ -79,14 +80,7 @@ print(input_shape)
 dropout_rate = 0.5
 num_layers = 3
 model = Sequential()
-if K.image_dim_ordering() == 'tf':
-    # (width, height, channels)
-    model.add(Permute((2, 3, 1), input_shape=input_shape))
-elif K.image_dim_ordering() == 'th':
-    # (channels, width, height)
-    model.add(Permute((1, 2, 3), input_shape=input_shape))
-else:
-    raise RuntimeError('Unknown image_dim_ordering.')
+
 # model.add(Convolution2D(32, 8, 1, subsample=(4, 4)))
 # model.add(Activation('relu'))
 # model.add(Convolution2D(64, 4, 1, subsample=(2, 2)))
@@ -113,26 +107,50 @@ else:
 # model.add(Reshape(INPUT_SHAPE, input_shape=input_shape))
 # model.add(LSTM(64))
 
-
+useMerge = False
 useHighway = True
+if not useMerge:
+    if K.image_dim_ordering() == 'tf':
+        # (width, height, channels)
+        model.add(Permute((2, 3, 1), input_shape=input_shape))
+    elif K.image_dim_ordering() == 'th':
+        # (channels, width, height)
+        model.add(Permute((1, 2, 3), input_shape=input_shape))
+    else:
+        raise RuntimeError('Unknown image_dim_ordering.')
 
-if useHighway:
-    model.add(Reshape(INPUT_SHAPE,input_shape=input_shape))
-    model.add(LSTM(10))
-    model.add(Dropout(dropout_rate))
-    # model.add(Dense(5))
-    # model.add(Flatten())
-    # for index in range(num_layers):
-    #     model.add(Highway(activation='relu'))
-    #     model.add(Dropout(dropout_rate))
-else:  # CNN
-    model.add(Convolution2D(32, 8, 1, subsample=(4, 4)))
-    model.add(Activation('relu'))
-    model.add(Convolution2D(64, 4, 1, subsample=(2, 2)))
-    model.add(Activation('relu'))
-    model.add(Flatten())
-    model.add(Dense(51))
-    model.add(Activation('relu'))
+    if useHighway:
+        model.add(Reshape(INPUT_SHAPE,input_shape=input_shape))
+        model.add(LSTM(10))
+        model.add(Dropout(dropout_rate))
+        # model.add(Dense(5))
+        # model.add(Flatten())
+        # for index in range(num_layers):
+        #     model.add(Highway(activation='relu'))
+        #     model.add(Dropout(dropout_rate))
+    else:  # CNN
+        model.add(Convolution2D(32, 8, 1, subsample=(4, 4)))
+        model.add(Activation('relu'))
+        model.add(Convolution2D(64, 4, 1, subsample=(2, 2)))
+        model.add(Activation('relu'))
+        model.add(Flatten())
+        model.add(Dense(51))
+        model.add(Activation('relu'))
+else:
+    lstm =Sequential()
+    input_shape1=(price_len,1)
+    lstm.add(Reshape(input_shape1,input_shape=(1,)+input_shape1))###（1，20,1）
+    lstm.add(LSTM(10))
+    lstm.add(Dropout(dropout_rate))
+    print lstm.summary()
+
+    account_model= Sequential()
+    input_shape2=(add_another3D,1)  ###23-20=3，，，，，（3,1）,
+    account_model.add(Reshape([add_another3D],input_shape=(1,)+input_shape2))## 【3】
+    account_model.add(Dense(10))
+    print account_model.summary()
+
+    model.add(Merge([lstm,account_model],mode='concat',concat_axis=1))
 
 model.add(Dense(nb_actions))
 model.add(Activation('softmax'))
