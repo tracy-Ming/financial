@@ -7,9 +7,9 @@ import argparse
 from PIL import Image
 import numpy as np
 import gym
-
-from keras.models import Sequential
-from keras.layers import Dense, Activation, Flatten, Convolution2D, Permute, LSTM, Reshape, Merge, Dropout, Highway
+import keras
+from keras.models import Sequential,Model
+from keras.layers import Dense, Activation, Flatten, Convolution2D, Permute, LSTM, Reshape, Merge, Dropout, Highway,Concatenate,Input,Lambda
 from keras.optimizers import Adam
 import keras.backend as K
 
@@ -22,19 +22,18 @@ from keras.callbacks import Callback
 import financial_env
 import financial_env_for_simulation
 from keras.layers.convolutional_recurrent import ConvLSTM2D
+
 price_len = 20
 add_another3D =3
-
-# input_data size (20+2)*1
-INPUT_SHAPE = (0 + price_len, 1)  ##need to have some way to normalize the last 2 dimension
 WINDOW_LENGTH = 1
 
 
 class financialProcessor(Processor):
     def process_observation(self, observation):
         if np.asarray(observation).shape[0] == 4:
-            return observation[0][:(len(observation[0])-3)]
-        return observation[:(len(observation)-3)]
+            return observation[0]#[observation[0][:(len(observation[0])-3)] ,observation[0][-3:] ]
+        else:
+            return observation#[observation[:(len(observation)-3)],observation[-3:]]
 
 
 parser = argparse.ArgumentParser()
@@ -75,41 +74,18 @@ nb_actions = env.action_space.n
 # env._step = _step
 
 # Next, we build our model. We use the same model that was described by Mnih et al. (2015).
-input_shape = (WINDOW_LENGTH,) + INPUT_SHAPE
-print(input_shape)
+
+
 dropout_rate = 0.5
 num_layers = 3
-model = Sequential()
 
-# model.add(Convolution2D(32, 8, 1, subsample=(4, 4)))
-# model.add(Activation('relu'))
-# model.add(Convolution2D(64, 4, 1, subsample=(2, 2)))
-
-
-#####need to figure out how to provide two inputs
-# price_model=Sequential()
-##price_model.add(Reshape(INPUT_SHAPE, input_shape=input_shape)) ###change
-# input_shape1=(price_len,1)
-# price_model.add(Permute((2, 1), input_shape=input_shape1))
-# price_model.add(LSTM(64))
-#
-#
-# holding_model=Sequential()
-# input_shape2=(input_shape[0]-price_len,1)
-# holding_model.add(Permute((2, 1), input_shape=input_shape2 ))
-##price_model.add(Reshape(INPUT_SHAPE, input_shape=input_shape)) ###change
-# holding_model.add(Dense(10 ))
-# holding_model.add(Activation('relu'))
-# holding_model.add(Flatten())
-#
-# model = Sequential()
-# model.add(Merge([price_model, holding_model], mode='concat'))
-# model.add(Reshape(INPUT_SHAPE, input_shape=input_shape))
-# model.add(LSTM(64))
-
-useMerge = False
-useHighway = True
+useMerge = True
+useLSTM = True
 if not useMerge:
+    model = Sequential()
+    # input_data size (20+2)*1
+    INPUT_SHAPE = (add_another3D + price_len, 1)  ##need to have some way to normalize the last 2 dimension
+    input_shape = (WINDOW_LENGTH,) + INPUT_SHAPE
     if K.image_dim_ordering() == 'tf':
         # (width, height, channels)
         model.add(Permute((2, 3, 1), input_shape=input_shape))
@@ -119,7 +95,7 @@ if not useMerge:
     else:
         raise RuntimeError('Unknown image_dim_ordering.')
 
-    if useHighway:
+    if useLSTM:
         model.add(Reshape(INPUT_SHAPE,input_shape=input_shape))
         model.add(LSTM(10))
         model.add(Dropout(dropout_rate))
@@ -136,26 +112,34 @@ if not useMerge:
         model.add(Flatten())
         model.add(Dense(51))
         model.add(Activation('relu'))
+    model.add(Dense(nb_actions))
+    model.add(Activation('softmax'))
+    # model.add(Activation('linear'))
+    print(model.summary())
+
 else:
-    lstm =Sequential()
-    input_shape1=(price_len,1)
-    lstm.add(Reshape(input_shape1,input_shape=(1,)+input_shape1))###（1，20,1）
-    lstm.add(LSTM(10))
-    lstm.add(Dropout(dropout_rate))
-    print lstm.summary()
+    ####use Lambda Layer to slice Tensor (23,1) into (20,1) (3,)
+    def slice(x,index,up):
+        if up:
+            return x[:,:index,]
+        else:
+            return x[:,index:,]
 
-    account_model= Sequential()
-    input_shape2=(add_another3D,1)  ###23-20=3，，，，，（3,1）,
-    account_model.add(Reshape([add_another3D],input_shape=(1,)+input_shape2))## 【3】
-    account_model.add(Dense(10))
-    print account_model.summary()
+    Obs_input = Input(shape=(1,price_len+add_another3D , 1) )
+    Obs = Reshape((price_len+add_another3D,1))(Obs_input)
+    price_input = Lambda(slice,output_shape=(price_len,1),arguments={"index":price_len,"up":True})(Obs)
+    account_input = Lambda(slice,output_shape=(add_another3D,1),arguments={"index":price_len,"up":False})(Obs)
+    lstm_out = LSTM(10,return_sequences=True)(price_input)
+    lstm_out = LSTM(6)(lstm_out)
+    account_out = Reshape((3,))(account_input)
+    account_out = Dense(6)(account_out)
+    x = keras.layers.concatenate([lstm_out, account_out])
+    # We stack a deep densely-connected network on top
+    x = Dense(nb_actions, activation='softmax')(x)
+    model= Model(inputs=Obs_input, outputs=x)
+    print model.summary()
 
-    model.add(Merge([lstm,account_model],mode='concat',concat_axis=1))
 
-model.add(Dense(nb_actions))
-model.add(Activation('softmax'))
-# model.add(Activation('linear'))
-print(model.summary())
 
 # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
 # even the metrics!
@@ -175,6 +159,7 @@ policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., valu
 # is Boltzmann-style exploration:
 # policy = BoltzmannQPolicy(tau=1.)
 # Feel free to give it a try!
+
 
 dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
                processor=processor, nb_steps_warmup=50000, gamma=.99, delta_range=(-1., 1.),
@@ -262,7 +247,6 @@ elif args.mode == 'test':
     dqn.load_weights(weights_filename)
     #dqn.test(env, nb_episodes=10, visualize=False)
     dqn.test(env, nb_max_episode_steps=100000,visualize=False)
-
     '''
     import Gnuplot
     gp = Gnuplot.Gnuplot(persist=3)
@@ -273,13 +257,11 @@ elif args.mode == 'test':
     plot2 = Gnuplot.PlotItems.Data(env.action_data, with_="linespoints lt rgb 'blue' lw 2 pt 7", title="action")
     plot3 = Gnuplot.PlotItems.Data(env.treward_data, with_="linespoints lt rgb 'red' lw 2 pt 7", title="total_reward")
     gp.plot(plot3,plot2, plot1)
-
     epsFilename = args.env_name+'.eps'
     gp.hardcopy(epsFilename, terminal='postscript', enhanced=1, color=1)  # must come after plot() function
     gp.reset()
     x=np.random.uniform(0,1,22).reshape(22,1)
     print(dqn.forward(x))
-
     #
     # print env.price_data,len(env.price_data)
     # print env.treward_data,len(env.treward_data)
