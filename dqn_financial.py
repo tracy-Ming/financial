@@ -38,7 +38,7 @@ class financialProcessor(Processor):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--mode', choices=['train', 'test'], default='test')
+parser.add_argument('--mode', choices=['train', 'test'], default='train')
 parser.add_argument('--env-name', type=str, default='real')
 parser.add_argument('--training-path', type=str, default='EURUSD60_train_1200.csv')
 parser.add_argument('--testing-path', type=str, default='EURUSD60_train_1200.csv')#default='EURUSD60_train_12min.csv')
