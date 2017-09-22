@@ -30,7 +30,7 @@ WINDOW_LENGTH = 1
 
 class financialProcessor(Processor):
     def process_observation(self, observation):
-        print observation
+        # print observation
         if np.asarray(observation).shape[0] == 4:
             return observation[0]#[observa  tion[0][:(len(observation[0])-3)] ,observation[0][-3:] ]
         else:
@@ -40,11 +40,15 @@ class financialProcessor(Processor):
 parser = argparse.ArgumentParser()
 parser.add_argument('--mode', choices=['train', 'test'], default='train')
 parser.add_argument('--env-name', type=str, default='real')
-parser.add_argument('--training-path', type=str, default='EURUSD60_train_1200.csv')
-parser.add_argument('--testing-path', type=str, default='EURUSD60_train_1200.csv')#default='EURUSD60_train_12min.csv')
+parser.add_argument('--training-path', type=str, default='dataset/EURUSD60_train_1200.csv')
+parser.add_argument('--training-steps', type=int, default=60000)
+parser.add_argument('--testing-path', type=str, default='dataset/EURUSD60_train_1200.csv')#default='EURUSD60_train_12min.csv')
+parser.add_argument('--testing-steps', type=str, default=500)
 parser.add_argument('--env-params', type=str, default='price_len=' + str(price_len) + ',dt=0.05,sin_index=0,noise=0,hold_num=0,Account_All=3000,lossRate=0.6,max=40000')
-parser.add_argument('--weights', type=str, default=None)#
+parser.add_argument('--weights', type=str, default=None)
 parser.add_argument('--update', type=str, default='n')#update the model when update=y
+
+
 args = parser.parse_args()
 
 datafile = args.training_path
@@ -221,9 +225,10 @@ class eps_History(Callback):
 if args.mode == 'train':
     # Okay, now it's time to learn something! We capture the interrupt exception so that training
     # can be prematurely aborted. Notice that you can the built-in Keras callbacks!
-    weights_filename = 'dqn_{}_weights.h5f'.format(args.env_name)
-    checkpoint_weights_filename = 'dqn_' + args.env_name + '_weights_{step}.h5f'
-    log_filename = 'dqn_{}_log.json'.format(args.env_name)
+
+    weights_filename = 'model/dqn_{}_weights.h5f'.format(args.env_name)
+    checkpoint_weights_filename = 'model/dqn_' + args.env_name + '_weights_{step}.h5f'
+    log_filename = 'model/dqn_{}_log.json'.format(args.env_name)
     res=eps_History(interval=60000)
     callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=60000*5)]
     callbacks += [FileLogger(log_filename, interval=100)]
@@ -231,29 +236,29 @@ if args.mode == 'train':
 
     if args.update == 'y':
         if args.weights:
-            weights =  'dqn_{}_weights.h5f'.format(args.weights)
+            weights =  'model/dqn_{}_weights.h5f'.format(args.weights)
             print (weights)
             model.load_weights(weights)
             print "loaded weight file:",weights_filename
-    dqn.fit(env, callbacks=callbacks, nb_steps=1200001, log_interval=60000)
+    dqn.fit(env, callbacks=callbacks, nb_steps=args.training_steps, log_interval=60000)
     ins = np.array(dqn.ins_info).reshape([-1,price_len+add_another3D])
     q = np.array(dqn.q_info).reshape([-1,5])
     ins_q = np.hstack((ins,q))
 
-    np.savetxt("ins.csv",ins,fmt='%.5f', delimiter=',',header="t0,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15,t16,t17,t18,t19,A1,A2,A3")
-    np.savetxt("q.csv", q, fmt='%.5f', delimiter=',',header="Q1,Q2,Q3,Q4,Q5")
+    np.savetxt("intermediate_res/ins.csv",ins,fmt='%.5f', delimiter=',',header="t0,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15,t16,t17,t18,t19,A1,A2,A3")
+    np.savetxt("intermediate_res/q.csv", q, fmt='%.5f', delimiter=',',header="Q1,Q2,Q3,Q4,Q5")
     # After training is done, we save the final weights one more time.
     dqn.save_weights(weights_filename, overwrite=True)
 
     # Finally, evaluate our algorithm for 10 episodes.
     #dqn.test(env, nb_episodes=10, visualize=False)
 elif args.mode == 'test':
-    weights_filename = 'dqn_{}_weights.h5f'.format(args.env_name)
+    weights_filename = 'model/dqn_{}_weights.h5f'.format(args.env_name)
     if args.weights:
         weights_filename = args.weights
     dqn.load_weights(weights_filename)
     #dqn.test(env, nb_episodes=10, visualize=False)
-    dqn.test(env, nb_max_episode_steps=500,visualize=False)
+    dqn.test(env, nb_max_episode_steps=args.testing_steps,visualize=False)
     '''
     import Gnuplot
     gp = Gnuplot.Gnuplot(persist=3)
@@ -289,5 +294,6 @@ elif args.mode == 'test':
     plt.plot(treward_data_x, treward_data_y,label="total_reward",color="blue")
     plt.plot(action_data_x,action_data_y,label="action",color="red")
     plt.legend(loc='upper left')
-    plt.savefig(args.env_name + '.jpg')
+    pic_name = "jpg/dqn_{}.jpg".format(args.env_name)
+    plt.savefig(pic_name)
     plt.show()

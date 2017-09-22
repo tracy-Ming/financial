@@ -104,7 +104,7 @@ class financialEnv(gym.Env):
         if data_index>=self.data_num:
             # data_index=data_index%self.data_num
             terminal=True
-            return None,0.,terminal,{}
+            # return None,0.,terminal,{}
             #self.hold_num = 0
             '''
             self.account=MyAccount.MyAccount(self._opt)
@@ -171,7 +171,7 @@ class financialEnv(gym.Env):
         sinTensor.append(self.account.Account/self.account.Account_All) ### use ratio instead of absolute value
         if self.account.Account < self.account.Account_All * (1 - self.account.lossRate) and self.mode == "train":
             terminal = True
-            return None, rw, terminal, {}
+            # return None, rw, terminal, {}
         sinTensor = np.asarray(sinTensor)
         return sinTensor.reshape(price_len+3,1), rw, terminal, {}
 #return [sinTensor[:price_len].reshape(price_len,1),sinTensor[price_len:].reshape(2,1) ], rw, terminal, {}
