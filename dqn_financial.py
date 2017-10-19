@@ -36,16 +36,18 @@ class financialProcessor(Processor):
         else:
             return observation#[observation[:(len(observation)-3)],observation[-3:]]
 
+    def process_reward(self, reward):
+        return reward#np.clip(reward, -1., 1.)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--mode', choices=['train', 'test'], default='train')
 parser.add_argument('--env-name', type=str, default='real')
 parser.add_argument('--training-path', type=str, default='dataset/EURUSD60_train_1200.csv')
-parser.add_argument('--training-steps', type=int, default=60000)
+parser.add_argument('--training-steps', type=int, default=1200000)
 parser.add_argument('--testing-path', type=str, default='dataset/EURUSD60_train_1200.csv')#default='EURUSD60_train_12min.csv')
-parser.add_argument('--testing-steps', type=str, default=500)
+parser.add_argument('--testing-steps', type=str, default=1200)
 parser.add_argument('--env-params', type=str, default='price_len=' + str(price_len) + ',dt=0.05,sin_index=0,noise=0,hold_num=0,Account_All=3000,lossRate=0.6,max=40000')
-parser.add_argument('--weights', type=str, default=None)
+parser.add_argument('--weights', type=str, default='real')
 parser.add_argument('--update', type=str, default='n')#update the model when update=y
 
 
@@ -255,7 +257,7 @@ if args.mode == 'train':
 elif args.mode == 'test':
     weights_filename = 'model/dqn_{}_weights.h5f'.format(args.env_name)
     if args.weights:
-        weights_filename = args.weights
+        weights_filename = 'model/dqn_{}_weights.h5f'.format(args.weights)
     dqn.load_weights(weights_filename)
     #dqn.test(env, nb_episodes=10, visualize=False)
     dqn.test(env, nb_max_episode_steps=args.testing_steps,visualize=False)

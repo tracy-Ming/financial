@@ -101,10 +101,9 @@ class financialEnv(gym.Env):
 
 #next price point
         data_index=(fx_index+price_len-1)%self.data_num
-        if data_index>=self.data_num:
+        if data_index>=self.data_num-1:
             # data_index=data_index%self.data_num
-            terminal=True
-            # return None,0.,terminal,{}
+            terminal = True
             #self.hold_num = 0
             '''
             self.account=MyAccount.MyAccount(self._opt)
@@ -123,8 +122,8 @@ class financialEnv(gym.Env):
         self.price_data.append(pricetmp)
 
 #差价
-        dprice = self.price[data_index] - self.price[data_index-1]
-        env_info=self.getEnvData(self.price[data_index])
+        dprice = self.price[fx_index+price_len-1] - self.price[fx_index+price_len-1 -1]
+        env_info=self.getEnvData(self.price[fx_index+price_len-1])
 
         if action == -1:
             self.lastactiontime=0
@@ -171,7 +170,6 @@ class financialEnv(gym.Env):
         sinTensor.append(self.account.Account/self.account.Account_All) ### use ratio instead of absolute value
         if self.account.Account < self.account.Account_All * (1 - self.account.lossRate) and self.mode == "train":
             terminal = True
-            # return None, rw, terminal, {}
         sinTensor = np.asarray(sinTensor)
         return sinTensor.reshape(price_len+3,1), rw, terminal, {}
 #return [sinTensor[:price_len].reshape(price_len,1),sinTensor[price_len:].reshape(2,1) ], rw, terminal, {}
@@ -179,6 +177,23 @@ class financialEnv(gym.Env):
     # return: (states, observations)
     def reset(self):
         self.account = MyAccount.MyAccount(self._opt)
+        self.fx_index = 0
+        self.price = []
+        self.trw = 0.
+        self.rw = []
+        self.lastactiontime = 0
+        self.action_index = []
+        self.price_data = []  # plot price
+        self.action_data = []  # plot action
+        self.treward_data = []  # plot total reward
+
+        # 为price预存price_len个点
+        for i in range(0, self.price_len):
+            self.price.append(self.data[i])
+            tmp = []
+            tmp.append(i - self.price_len + 1)
+            tmp.append(self.data[i])
+            self.price_data.append(tmp)
         return self.step(2)
 
     def get_action_meanings(self):
