@@ -43,7 +43,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--mode', choices=['train', 'test'], default='train')
 parser.add_argument('--env-name', type=str, default='real')
 parser.add_argument('--training-path', type=str, default='dataset/EURUSD60_train_1200.csv')
-parser.add_argument('--training-steps', type=int, default=1200000)
+parser.add_argument('--training-steps', type=int, default=600000)
 parser.add_argument('--testing-path', type=str, default='dataset/EURUSD60_train_1200.csv')#default='EURUSD60_train_12min.csv')
 parser.add_argument('--testing-steps', type=str, default=1200)
 parser.add_argument('--env-params', type=str, default='price_len=' + str(price_len) + ',dt=0.05,sin_index=0,noise=0,hold_num=0,Account_All=3000,lossRate=0.6,max=40000')
@@ -63,7 +63,7 @@ if args.env_name != 'real':
 else:
     env = financial_env.financialEnv(args.env_params, datafile,args.mode)
 np.random.seed(123)
-# env.seed(123)
+env.seed(123)
 nb_actions = env.action_space.n
 
 # We patch the environment to be closer to what Mnih et al. actually do: The environment
@@ -159,8 +159,8 @@ processor = financialProcessor()
 # the agent initially explores the environment (high eps) and then gradually sticks to what it knows
 # (low eps). We also set a dedicated eps value that is used during testing. Note that we set it to 0.05
 # so that the agent still performs some random actions. This ensures that the agent cannot get stuck.
-policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., value_min=0.1, value_test=0.05,
-                              nb_steps=50000)
+policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., value_min=.1, value_test=.05,
+                              nb_steps=1000000)
 
 # The trade-off between exploration and exploitation is difficult and an on-going research topic.
 # If you want, you can experiment with the parameters or use a different policy. Another popular one
@@ -171,7 +171,7 @@ policy = LinearAnnealedPolicy(EpsGreedyQPolicy(), attr='eps', value_max=1., valu
 
 dqn = DQNAgent(model=model, nb_actions=nb_actions, policy=policy, memory=memory,
                processor=processor, nb_steps_warmup=50000, gamma=.99, delta_range=(-1., 1.),
-               target_model_update=100, train_interval=4)
+               target_model_update=10000, train_interval=4)
 dqn.compile(Adam(lr=.00025), metrics=['mae'])
 
 class eps_History(Callback):
