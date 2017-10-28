@@ -223,14 +223,13 @@ class eps_History(Callback):
     def on_episode_end(self, episode, logs):
         self.episode_rewards.append(logs['episode_reward'])
 
-
+suffix = args.training_path.split('/')[-1].split('.')[0]
 if args.mode == 'train':
     # Okay, now it's time to learn something! We capture the interrupt exception so that training
     # can be prematurely aborted. Notice that you can the built-in Keras callbacks!
-
-    weights_filename = 'model/dqn_{}_weights.h5f'.format(args.env_name)
-    checkpoint_weights_filename = 'model/dqn_' + args.env_name + '_weights_{step}.h5f'
-    log_filename = 'model/dqn_{}_log.json'.format(args.env_name)
+    weights_filename = 'model/dqn_{}_weights_{}.h5f'.format(args.env_name,suffix)
+    checkpoint_weights_filename = 'model/dqn_' + args.env_name + '_weights_{step}_'+ suffix +'.h5f'
+    log_filename = 'model/dqn_{}_log_{}.json'.format(args.env_name,suffix)
     res=eps_History(interval=60000)
     callbacks = [ModelIntervalCheckpoint(checkpoint_weights_filename, interval=60000*5)]
     callbacks += [FileLogger(log_filename, interval=100)]
@@ -238,7 +237,7 @@ if args.mode == 'train':
 
     if args.update == 'y':
         if args.weights:
-            weights =  'model/dqn_{}_weights.h5f'.format(args.weights)
+            weights =  'model/dqn_{}_weights_{}.h5f'.format(args.weights,suffix)
             print (weights)
             model.load_weights(weights)
             print "loaded weight file:",weights_filename
@@ -255,9 +254,9 @@ if args.mode == 'train':
     # Finally, evaluate our algorithm for 10 episodes.
     #dqn.test(env, nb_episodes=10, visualize=False)
 elif args.mode == 'test':
-    weights_filename = 'model/dqn_{}_weights.h5f'.format(args.env_name)
+    weights_filename = 'model/dqn_{}_weights_{}.h5f'.format(args.env_name,suffix)
     if args.weights:
-        weights_filename = 'model/dqn_{}_weights.h5f'.format(args.weights)
+        weights_filename = 'model/dqn_{}_weights_{}.h5f'.format(args.weights,suffix)
     dqn.load_weights(weights_filename)
     #dqn.test(env, nb_episodes=10, visualize=False)
     dqn.test(env, nb_max_episode_steps=args.testing_steps,visualize=False)
@@ -296,6 +295,6 @@ elif args.mode == 'test':
     plt.plot(treward_data_x, treward_data_y,label="total_reward",color="blue")
     plt.plot(action_data_x,action_data_y,label="action",color="red")
     plt.legend(loc='upper left')
-    pic_name = "jpg/dqn_{}.jpg".format(args.env_name)
+    pic_name = "jpg/dqn_{}_{}.jpg".format(args.env_name,args.testing_path.split('/')[-1].split('.')[0])
     plt.savefig(pic_name)
     plt.show()
