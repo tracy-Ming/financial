@@ -33,6 +33,8 @@ class financialEnv(gym.Env):
         self.action_index = []
         self.maxdown=100
         self.maxdown_action=0
+        self.mean = 0.0
+        self.std = 0.0
         self.data,self.data_num=self.dataloading(filepath)
 #plot
         self.price_data=[]#plot price
@@ -62,9 +64,9 @@ class financialEnv(gym.Env):
     def dataloading(self, filepath):
         csvfile = np.loadtxt(filepath, usecols=(1,2), dtype=np.float32, delimiter=',')
         data = csvfile[:,1]
-        mean_ = np.mean(data)
-        std_ = np.std(data)
-        data = (data-mean_)/std_
+        self.mean = np.mean(data)
+        self.std = np.std(data)
+        data = (data-self.mean)/self.std
         num = np.asarray(data).__len__()
         return np.array(data), num
 
@@ -122,7 +124,7 @@ class financialEnv(gym.Env):
         self.price_data.append(pricetmp)
 
 #差价
-        dprice = self.price[fx_index+price_len-1] - self.price[fx_index+price_len-1 -1]
+        dprice = (self.price[fx_index+price_len-1] - self.price[fx_index+price_len-1 -1]) * self.std
         env_info=self.getEnvData(self.price[fx_index+price_len-1])
 
         if action == -1:
