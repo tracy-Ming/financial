@@ -103,7 +103,7 @@ class financialEnv(gym.Env):
 
 #next price point
         data_index=(fx_index+price_len-1)%self.data_num
-        if data_index>=self.data_num-1:
+        if data_index>=self.data_num-1 and self.mode == "train":
             # data_index=data_index%self.data_num
             terminal = True
             #self.hold_num = 0
@@ -124,7 +124,7 @@ class financialEnv(gym.Env):
         self.price_data.append(pricetmp)
 
 #差价
-        dprice = (self.price[fx_index+price_len-1] - self.price[fx_index+price_len-1 -1]) * self.std
+        dprice = (self.price[fx_index+price_len-1] - self.price[fx_index+price_len-1 -1]) * 1#self.std
         env_info=self.getEnvData(self.price[fx_index+price_len-1])
 
         if action == -1:
