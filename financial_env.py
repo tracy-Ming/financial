@@ -124,7 +124,7 @@ class financialEnv(gym.Env):
         self.price_data.append(pricetmp)
 
 #差价
-        dprice = (self.price[fx_index+price_len-1] - self.price[fx_index+price_len-1 -1]) * 1#self.std
+        dprice = (self.price[fx_index+price_len-1] - self.price[fx_index+price_len-1 -1]) * self.std
         env_info=self.getEnvData(self.price[fx_index+price_len-1])
 
         if action == -1:
