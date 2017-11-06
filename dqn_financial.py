@@ -241,13 +241,13 @@ if args.mode == 'train':
             print (weights)
             model.load_weights(weights)
             print "loaded weight file:",weights_filename
-    dqn.fit(env, callbacks=callbacks, nb_steps=args.training_steps, log_interval=60000)
-    ins = np.array(dqn.ins_info).reshape([-1,price_len+add_another3D])
-    q = np.array(dqn.q_info).reshape([-1,5])
-    ins_q = np.hstack((ins,q))
-
-    np.savetxt("intermediate_res/ins.csv",ins,fmt='%.5f', delimiter=',',header="t0,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15,t16,t17,t18,t19,A1,A2,A3")
-    np.savetxt("intermediate_res/q.csv", q, fmt='%.5f', delimiter=',',header="Q1,Q2,Q3,Q4,Q5")
+    dqn.fit(env, callbacks=callbacks, nb_steps=args.training_steps, log_interval=60000,nb_max_episode_steps=1000)
+    # ins = np.array(dqn.ins_info).reshape([-1,price_len+add_another3D])
+    # q = np.array(dqn.q_info).reshape([-1,5])
+    # ins_q = np.hstack((ins,q))
+    #
+    # np.savetxt("intermediate_res/ins.csv",ins,fmt='%.5f', delimiter=',',header="t0,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15,t16,t17,t18,t19,A1,A2,A3")
+    # np.savetxt("intermediate_res/q.csv", q, fmt='%.5f', delimiter=',',header="Q1,Q2,Q3,Q4,Q5")
     # After training is done, we save the final weights one more time.
     dqn.save_weights(weights_filename, overwrite=True)
 

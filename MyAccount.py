@@ -11,7 +11,7 @@ class MyAccount:
         self.lossRate = args['lossRate'] or 0.6
         self.standard_order=100000 #### 1 lot size=100 000
         minimum_order = 1000  #### usually minimum order is 0.01 lot size =1000
-        self.lever = 500
+        self.lever = 1#500
         self.cost = 0#0.035
         self.swap = 0#0.01 / 60 / 24 / self.lever * (500 * 1000)  ### each day interest rate is 0.01 for 0.01 lot and 500..
                                                                 #  leverage , and here it is the rate for each minute
