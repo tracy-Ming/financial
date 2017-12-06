@@ -223,6 +223,29 @@ class eps_History(Callback):
     def on_episode_end(self, episode, logs):
         self.episode_rewards.append(logs['episode_reward'])
 
+class eps_test_history(Callback):
+    def __init__(self):
+        self.action_space=[-2,-1,0,1,2]
+        self.reset()
+
+    def reset(self):
+        self.state = [np.zeros(price_len+add_another3D)]
+        self.action = []
+        self.rw = []
+
+    def on_step_end(self,steps,logs):
+        self.state.append(logs['observation'].reshape(price_len+add_another3D))
+        self.action.append(self.action_space[logs['action']])
+        self.rw.append(logs['reward'])
+
+    def on_episode_end(self, episode, logs):
+        obs = np.array(self.state[0:-1]).reshape([-1,price_len+add_another3D])
+        a = np.array(self.action).reshape([-1,1])
+        r = np.array(self.rw).reshape([-1,1])
+        obs_a_r = np.hstack((obs,a,r))
+        np.savetxt("intermediate_res/obs_a_r_test.csv",obs_a_r,fmt='%.5f', delimiter=',',header="t0,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15,t16,t17,t18,t19,A1,A2,A3,Action,RW")
+        print('ending episode...')
+
 suffix = args.training_path.split('/')[-1].split('.')[0]
 if args.mode == 'train':
     # Okay, now it's time to learn something! We capture the interrupt exception so that training
@@ -259,7 +282,8 @@ elif args.mode == 'test':
         weights_filename = 'model/dqn_{}_weights_{}.h5f'.format(args.weights,suffix)
     dqn.load_weights(weights_filename)
     #dqn.test(env, nb_episodes=10, visualize=False)
-    dqn.test(env, nb_max_episode_steps=args.testing_steps,visualize=False)
+    calls= [eps_test_history()]
+    dqn.test(env, callbacks=calls,nb_max_episode_steps=args.testing_steps,visualize=False)
     '''
     import Gnuplot
     gp = Gnuplot.Gnuplot(persist=3)
