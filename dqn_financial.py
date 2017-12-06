@@ -46,8 +46,8 @@ parser.add_argument('--training-path', type=str, default='dataset/EURUSD60_train
 parser.add_argument('--training-steps', type=int, default=1200000)
 parser.add_argument('--testing-path', type=str, default='dataset/EURUSD60_train_1200.csv')#default='EURUSD60_train_12min.csv')
 parser.add_argument('--testing-steps', type=str, default=1200)
-parser.add_argument('--env-params', type=str, default='price_len=' + str(price_len) + ',dt=0.05,sin_index=0,noise=0,hold_num=0,Account_All=3000,lossRate=0.6,max=40000')
-parser.add_argument('--weights', type=str, default='real')
+parser.add_argument('--env-params', type=str, default='price_len=' + str(price_len) + ',dt=0.05,sin_index=0,noise=0,hold_num=0,Account_All=3,lossRate=0.6,max=3')
+parser.add_argument('--weights', type=str, default=None)
 parser.add_argument('--update', type=str, default='n')#update the model when update=y
 
 
@@ -237,11 +237,11 @@ if args.mode == 'train':
 
     if args.update == 'y':
         if args.weights:
-            weights =  'model/dqn_{}_weights_{}.h5f'.format(args.weights,suffix)
+            weights =  'model/dqn_{}_weights_{}.h5f'.format(args.env_name,args.weights)
             print (weights)
             model.load_weights(weights)
             print "loaded weight file:",weights_filename
-    dqn.fit(env, callbacks=callbacks, nb_steps=args.training_steps, log_interval=60000,nb_max_episode_steps=1000)
+    dqn.fit(env, callbacks=callbacks, nb_steps=args.training_steps, log_interval=60000)
     # ins = np.array(dqn.ins_info).reshape([-1,price_len+add_another3D])
     # q = np.array(dqn.q_info).reshape([-1,5])
     # ins_q = np.hstack((ins,q))
