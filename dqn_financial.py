@@ -243,6 +243,9 @@ class eps_test_history(Callback):
         a = np.array(self.action).reshape([-1,1])
         r = np.array(self.rw).reshape([-1,1])
         obs_a_r = np.hstack((obs,a,r))
+        p = r[r>=0.]
+        n = r[r<0.]
+        print datafile,' acc-->:',len(p)/(len(n)+len(p))
         np.savetxt("intermediate_res/obs_a_r_test.csv",obs_a_r,fmt='%.5f', delimiter=',',header="t0,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15,t16,t17,t18,t19,A1,A2,A3,Action,RW")
         print('ending episode...')
 
